@@ -1,10 +1,37 @@
 public struct Catalyst {
 
-    private static var _registry = [AnyObject]()
+    private static var _registry = [ObjectIdentifier:[(Any) -> Any?]]()
     private static var _defaultsLoaded = false
 
     public static func convert<V>(_ value: Any) -> V? {
         return self.convert(value, to: V.self)
+    }
+
+    public static func convert(_ value: Any, for variable: Any) -> Any? {
+        let valueType = type(of: value)
+        let forType = type(of:variable)
+        let valueTypeID = ObjectIdentifier(valueType)
+        let forTypeID = ObjectIdentifier(forType)
+
+        if valueTypeID == forTypeID {
+            return value
+        }
+
+        if !_defaultsLoaded {
+            loadDefaults()
+        }
+
+        guard let converters = _registry[ObjectIdentifier(forType)] else {
+            return nil
+        }
+
+        for converter in converters {
+            if let result = converter(value), type(of:result) == forType {
+                return result
+            }
+        }
+
+        return nil
     }
 
     public static func convert<V>(_ value: Any, to type: V.Type) -> V? {
@@ -16,8 +43,12 @@ public struct Catalyst {
             loadDefaults()
         }
 
-        for case let converter as ConverterTo<V> in _registry {
-            if let result = converter.convert(value) {
+        guard let converters = _registry[ObjectIdentifier(type)] else {
+            return nil
+        }
+
+        for converter in converters {
+            if let result = converter(value) as? V {
                 return result
             }
         }
@@ -26,7 +57,10 @@ public struct Catalyst {
     }
 
     public static func register<V>(converter: ConverterTo<V>, for type: V.Type) {
-        _registry.append(converter)
+        let typeID = ObjectIdentifier(type)
+        var converters = _registry[typeID] ?? []
+        converters.append(converter.convert)
+        _registry[typeID] = converters
     }
 
     public static func register<V>(converterSetup: (ConverterTo<V>) -> ()) {
@@ -56,6 +90,10 @@ public class ConverterTo<V> {
 
     public init(setup: (ConverterTo<V>) -> ()) {
         setup(self)
+    }
+
+    public func append<T>(_ initialiser: @escaping (T) -> V?) {
+        return self.append(initialiser, for: T.self)
     }
 
     public func append<T>(_ initialiser: @escaping (T) -> V?, for type: T.Type) {

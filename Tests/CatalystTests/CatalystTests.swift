@@ -43,8 +43,12 @@ class CatalystTests: XCTestCase {
         XCTAssert(type(of:y!) == UInt16.self, "\(type(of: y)) is not UInt16")
 
         // Test edge cases
+        // Out of bounds (min)
         let z = Catalyst.convert(-1, to: UInt.self)
         XCTAssertNil(z)
+
+        let w = Catalyst.convert(256, to: UInt8.self)
+        XCTAssertNil(w)
 
         // This is the only builtin that can't be represented in IntMax, but since it
         // is the only one it can only be converted to itself.
