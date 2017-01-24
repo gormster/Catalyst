@@ -41,14 +41,6 @@ extension SomeValue {
         }
     }
 
-    static func +(lhs: SomeValue, rhs: SomeValue) -> SomeValue {
-        if let rhs = Catalyst.convert(rhs, for: lhs) {
-            if let result = lhs.intValue + rhs.intValue {
-
-            }
-        }
-    }
-
 }
 
 class DynamismTests: XCTestCase {
